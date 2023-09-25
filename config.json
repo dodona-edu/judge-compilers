@@ -1,0 +1,4 @@
+{
+    "judge": "compilers",
+    "image": "thomasfaingnaert/compilers:dodona"
+}

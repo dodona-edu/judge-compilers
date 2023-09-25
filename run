@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+
+import sys
+import json
+from operator import itemgetter
+from pathlib import Path
+from typing import Any, Sequence, Union
+import subprocess
+import os
+import sys
+import shutil
+
+try:
+    import judge
+    from compile_error import handle_compile_error
+    from dodona_command import Judgement, ErrorType
+except ModuleNotFoundError:
+    sys.path.append(str(Path(__file__).parent))
+
+    import judge
+    from compile_error import handle_compile_error
+    from dodona_command import Judgement, ErrorType
+
+def get_input():
+    return "\n".join(line for line in sys.stdin)
+
+def mkdir(folder:Union[str,Path]):
+    # Create a folder if it does not exist yet
+    # Missing parent folders on the path are created if abscent
+    # If the folder already exists, then nothing happens
+    folder = Path(folder)
+
+    folder.mkdir(parents=True, exist_ok=True)
+
+def cd(path:Union[str,Path]):
+    os.chdir(str(path))
+
+def cp(src:Union[str,Path], dst:Union[str,Path]):
+    shutil.copy(str(src), str(dst))
+
+def cmake(args:Sequence[str]) -> bool:
+    # returns whether compilation was successful
+    proc_res = subprocess.run(["cmake", *args], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+
+    if proc_res.returncode != 0:
+        handle_compile_error(proc_res.stderr.decode("utf-8"), proc_res.returncode)
+        return False
+    
+    return True
+
+if __name__ == "__main__":
+    in_json_dict = json.loads(
+        get_input()
+    )  # dict keys: memory_limit, time_limit, programming_language, natural_language, resources, source, judge, workdir
+
+    eval_resources_path = Path(in_json_dict["resources"])
+    source_path = Path(in_json_dict["source"])
+    workdir_path = Path(in_json_dict["workdir"])
+
+    with (workdir_path / "build-config.json").open("r") as f:
+        build_config = json.load(f)
+
+    with Judgement() as judgement:
+        # --- Compile  ---
+
+        cp(source_path, workdir_path / build_config["submission_path"])
+
+        cd(workdir_path)
+
+        build_path = Path("build")
+        
+        mkdir(build_path)
+        cd(build_path)
+
+        cmake([f"-DDODONA_RESOURCES_PATH:FILEPATH={str(eval_resources_path)}", ".."])
+        if not cmake(["--build", "."]):
+            judgement.status = {
+                "enum": ErrorType.COMPILATION_ERROR,
+                "human": ErrorType.COMPILATION_ERROR
+            }
+            judgement.accepted = False
+            exit()
+
+        cd("..")
+
+        # --- Diff with expected result ---
+        # Invoke reference solution (?)
+
+        res = judge.test_submission(eval_resources_path, build_path)
+
+        if res["correct"] < res["total"]:
+            judgement.status = judge._status_wrong
+            judgement.accepted = False

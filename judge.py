@@ -73,33 +73,22 @@ def _test_run_helper(test_source_path:Path, expected_output_path:Path, expected_
     test_status = lit_output_json["code"] # "PASS" -> is_correct == True, "TIMEOUT" or "FAIL" -> is_correct = False
     test_duration = lit_output_json["elapsed"]
 
-    if lit_target_path.name.endswith(".custom.c"):
-        return {
-            "correct":          is_correct,
-            "status":           test_status,
-            "duration":         test_duration,
-            "expected_output":  None,
-            "expected_error":   None,
-            "generated_output": None,
-            "generated_error":  None,
-        }
-    else:
-        stdout_file_path, stderr_file_path = itemgetter("stdout", "stderr")(get_test_output_files(test_source_path, evaluation_folder, build_path))
+    stdout_file_path, stderr_file_path = itemgetter("stdout", "stderr")(get_test_output_files(test_source_path, evaluation_folder, build_path))
 
-        with stdout_file_path.open("r", errors="replace") as f:
-            generated_output = f.read()
-        with stderr_file_path.open("r", errors="replace") as f:
-            generated_error  = f.read()
-    
-        return {
-            "correct":          is_correct,
-            "status":           test_status,
-            "duration":         test_duration,
-            "expected_output":  expected_output,
-            "expected_error":   expected_error,
-            "generated_output": generated_output,
-            "generated_error":  generated_error,
-        }
+    with stdout_file_path.open("r", errors="replace") as f:
+        generated_output = f.read()
+    with stderr_file_path.open("r", errors="replace") as f:
+        generated_error  = f.read()
+
+    return {
+        "correct":          is_correct,
+        "status":           test_status,
+        "duration":         test_duration,
+        "expected_output":  expected_output,
+        "expected_error":   expected_error,
+        "generated_output": generated_output,
+        "generated_error":  generated_error,
+    }
 
 _status_correct = {
     "enum": ErrorType.CORRECT, 

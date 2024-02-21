@@ -147,42 +147,31 @@ def run_test(test_source_path:Path, expected_output_path:Path, expected_error_pa
 
         test_code_md = f"```c\n{test_code}\n```"
     
-    if is_custom_test:
-        with Test(description={"description": f" &#x1F4C4; {short_file_path_str}\n{test_code_md}", "format": MessageFormat.MARKDOWN}, expected="") as test:
-            if is_correct:
-                test.status = _status_correct
-            else:
-                test.status = _status_wrong
-            test.generated = ""
+    # --- Get expected output/error ---
 
-            if did_timeout:
-                warn_timeout(test_duration)
+    if expected_error:
+        expected = expected_error
+        generated = generated_error
+        unexpected_error = False
     else:
-        # --- Get expected output/error ---
-
-        if expected_error:
-            expected = expected_error
-            generated = generated_error
-            unexpected_error = False
-        else:
-            expected = expected_output
-            generated = generated_output
-            
-            unexpected_error = bool(generated_error)
+        expected = expected_output
+        generated = generated_output
         
-        # --- Output test info ---
+        unexpected_error = bool(generated_error)
+    
+    # --- Output test info ---
 
-        with Test(description={"description": f" &#x1F4C4; {short_file_path_str}\n{test_code_md}", "format": MessageFormat.MARKDOWN}, expected=expected) as test:
-            if is_correct:
-                test.status = _status_correct
-            else:
-                test.status = _status_wrong
-            test.generated = generated
+    with Test(description={"description": f" &#x1F4C4; {short_file_path_str}\n{test_code_md}", "format": MessageFormat.MARKDOWN}, expected=expected) as test:
+        if is_correct:
+            test.status = _status_correct
+        else:
+            test.status = _status_wrong
+        test.generated = generated
 
-            if unexpected_error:
-                warn_unexpected_error(generated_error)
-            elif did_timeout:
-                warn_timeout(test_duration)
+        if unexpected_error:
+            warn_unexpected_error(generated_error)
+        elif did_timeout:
+            warn_timeout(test_duration)
     
     # --- Help counting the total number of (in)correct tests
 

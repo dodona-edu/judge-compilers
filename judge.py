@@ -265,10 +265,15 @@ def create_tab(tab_folder:Path, evaluation_folder:Path, build_path:Path) -> Coun
     # If there are no sub-rubrics, then a dummy-context is created to hold all
     # testcases for this tab
 
+    is_grading_only = (set(tab_folder.glob("**/*.c")) == set(tab_folder.glob("grading/**/*.c")))
+
+    if is_grading_only:
+        return Counter()
+
     # If there are sub_rubrics then the tab_folder contains a folder for each 
     # sub-rubric, which contain folders for all test cases, which each contain
     # c files for each test
-    has_sub_rubrics = bool(list(tab_folder.glob("*/**/*.c"))) and not all(f.name == "hidden" for f in tab_folder.iterdir() if f.is_dir())
+    has_sub_rubrics = bool(list(tab_folder.glob("*/**/*.c"))) and not all(f.name in ("hidden", "grading") for f in tab_folder.iterdir() if f.is_dir())
 
     res = Counter()
 
@@ -310,7 +315,7 @@ def create_context(context_folder:Path, evaluation_folder:Path, build_path:Path,
             test_case_folders = [item for item in context_folder.glob("*") if item.is_dir()]
             
             for folder in test_case_folders:
-                if folder.name == "hidden":
+                if folder.name in ("hidden", "grading"):
                     continue # We want to run the hidden tests last
                 else:
                     res += run_test_case(folder, evaluation_folder=evaluation_folder, build_path=build_path)

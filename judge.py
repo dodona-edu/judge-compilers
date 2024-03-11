@@ -74,11 +74,14 @@ def _test_run_helper(test_source_path:Path, expected_output_path:Path, expected_
     test_duration = lit_output_json["elapsed"]
 
     if lit_target_path.name.endswith(".custom.c"):
+        expected_output = None
+        if "alignment" in str(lit_target_path) or "save-regs" in str(lit_target_path): ## DEBUG
+            expected_output = json.dumps(lit_output_json, indent=4).replace('"', '\\"').replace('\n', '\\n')
         return {
             "correct":          is_correct,
             "status":           test_status,
             "duration":         test_duration,
-            "expected_output":  None,
+            "expected_output":  expected_output,
             "expected_error":   None,
             "generated_output": None,
             "generated_error":  None,
@@ -147,7 +150,7 @@ def run_test(test_source_path:Path, expected_output_path:Path, expected_error_pa
 
         test_code_md = f"```c\n{test_code}\n```"
     
-    if is_custom_test:
+    if False: #is_custom_test:
         with Test(description={"description": f" &#x1F4C4; {short_file_path_str}\n{test_code_md}", "format": MessageFormat.MARKDOWN}, expected="") as test:
             if is_correct:
                 test.status = _status_correct

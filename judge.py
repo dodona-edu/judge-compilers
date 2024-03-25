@@ -253,6 +253,8 @@ def test_submission(evaluation_folder:Path, build_path:Path) -> Counter:
     # Tabs correspond to top-level rubrics (e.g. "Literals")
     tab_folders = [item for item in evaluation_folder.glob("*") if item.is_dir()]
     for folder in tab_folders:
+        if folder.name == "grading":
+            continue
         res += create_tab(folder, evaluation_folder=evaluation_folder, build_path=build_path)
 
     return res

@@ -10,6 +10,7 @@ import time
 from typing import Any, Optional, Tuple, Dict, Union
 from dodona_command import Judgement, MessageFormat, Tab, Context, TestCase, Test, Annotation, Message, ErrorType
 import subprocess
+from helpers import tree
 
 def get_test_output_files(test_source_path:Path, evaluation_folder:Path, build_path:Path) -> Dict[str, Path]:
     rel_path = test_source_path.relative_to(evaluation_folder)
@@ -75,8 +76,6 @@ def _test_run_helper(test_source_path:Path, expected_output_path:Path, expected_
 
     if lit_target_path.name.endswith(".custom.c"):
         expected_output = None
-        if "alignment" in str(lit_target_path) or "save-regs" in str(lit_target_path): ## DEBUG
-            expected_output = json.dumps(lit_output_json, indent=4).replace('"', '\\"').replace('\n', '\\n')
         return {
             "correct":          is_correct,
             "status":           test_status,

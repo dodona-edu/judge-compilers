@@ -305,7 +305,7 @@ def create_context(context_folder:Path, evaluation_folder:Path, build_path:Path,
     else:
         ctx_kwargs = {}
 
-    has_sub_folders = bool(list(context_folder.glob("*/**/*.c"))) and not all(f.name == "hidden" for f in context_folder.iterdir() if f.is_dir())
+    has_sub_folders = bool(list(context_folder.glob("*/**/*.c"))) and not all(f.name == "hidden" or f.name == "grading" for f in context_folder.iterdir() if f.is_dir())
 
     with Context(**ctx_kwargs) as ctx:
         if not has_sub_folders:

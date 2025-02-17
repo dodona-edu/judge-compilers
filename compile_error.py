@@ -34,7 +34,7 @@ def handle_compile_error(stderr_content:str, exit_code:Optional[int]=None):
                 description = error_message, format=MessageFormat.CODE
             ):
                 with Annotation(
-                    row = int(line),
+                    row = int(line) - 1,
                     text = error_message,
                     type="error"
                 ):

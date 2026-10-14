@@ -1,0 +1,8 @@
+import lit.formats
+
+config.name = "literals"
+config.suffixes = [".c"]
+config.test_format = lit.formats.ShTest(execute_external=False)
+config.test_source_root = "@DODONA_RESOURCES_PATH@"
+config.test_exec_root = "@CMAKE_BINARY_DIR@/test"
+config.substitutions.append(("%driver", "@CMAKE_BINARY_DIR@/driver"))

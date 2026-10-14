@@ -5,7 +5,6 @@ import sys
 from abc import ABC
 from enum import Enum
 from types import SimpleNamespace, TracebackType
-from typing import Union, Dict, Type, Optional
 
 
 class ErrorType(str, Enum):
@@ -22,7 +21,7 @@ class ErrorType(str, Enum):
     CORRECT = "correct"
     CORRECT_ANSWER = "correct answer"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self)
 
 
@@ -33,7 +32,7 @@ class MessagePermission(str, Enum):
     STAFF = "staff"
     ZEUS = "zeus"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self)
 
 
@@ -51,7 +50,7 @@ class MessageFormat(str, Enum):
     CODE = "code"
     SQL = "sql"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self)
 
 
@@ -62,7 +61,7 @@ class AnnotationSeverity(str, Enum):
     WARNING = "warning"
     INFO = "info"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self)
 
 
@@ -77,17 +76,17 @@ class DodonaException(Exception):
     """
 
     def __init__(
-            self,
-            status: Dict[str, str],
-            *args,
-            **kwargs,
-    ):
+        self,
+        status: dict[str, str],
+        *args: object,
+        **kwargs: object,
+    ) -> None:
         super().__init__()
         self.status = status
         self.message = Message(*args, **kwargs) if len(args) > 0 or len(kwargs) > 0 else None
 
 
-class DodonaCommand(ABC):
+class DodonaCommand(ABC):  # noqa: B024
     """abstract class, parent of all Dodona commands
     This class provides all shared functionality for the Dodona commands. These commands
     should be used in a Python 'with' block.
@@ -116,7 +115,7 @@ class DodonaCommand(ABC):
     }
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: object) -> None:
         self.start_args = SimpleNamespace(**kwargs)
         self.close_args = SimpleNamespace()
 
@@ -124,16 +123,16 @@ class DodonaCommand(ABC):
         """name used in start and close messages, defaults to the lowercase version of the classname"""
         return self.__class__.__name__.lower()
 
-    def start_msg(self) -> dict:
+    def start_msg(self) -> dict | None:
         """start message that is printed as JSON to stdout when entering the 'with' block"""
         return {"command": f"start-{self.name()}", **self.start_args.__dict__}
 
-    def close_msg(self) -> dict:
+    def close_msg(self) -> dict | None:
         """close message that is printed as JSON to stdout when exiting the 'with' block"""
         return {"command": f"close-{self.name()}", **self.close_args.__dict__}
 
     @staticmethod
-    def __print_command(result: Union[None, dict]) -> None:
+    def __print_command(result: dict | None) -> None:
         """print the provided to stdout as JSON
         :param result: dict that will be JSON encoded and printed to stdout
         """
@@ -172,10 +171,10 @@ class DodonaCommand(ABC):
         return False
 
     def __exit__(
-            self,
-            exc_type: Type[BaseException],
-            exc_val: BaseException,
-            exc_tb: TracebackType,
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> bool:
         """print the close message when exiting the 'with' block & handle enclosed exceptions
         If a DodonaException was thrown in the enclosed 'with' block, the 'handle_dodona_exception'
@@ -183,10 +182,7 @@ class DodonaCommand(ABC):
         returns True, this function also returns True and the error is not propagated.
         :return: if True, the exception is not propagated
         """
-        if isinstance(exc_val, DodonaException):
-            handled = self.handle_dodona_exception(exc_val)
-        else:
-            handled = False
+        handled = self.handle_dodona_exception(exc_val) if isinstance(exc_val, DodonaException) else False
 
         self.__print_command(self.close_msg())
         return handled
@@ -198,8 +194,9 @@ class DodonaCommandWithAccepted(DodonaCommand):
     def handle_dodona_exception(self, exception: DodonaException) -> bool:
         """update the accepted parameter based on the exception status"""
         if not hasattr(self.close_args, "accepted"):
-            accepted = exception.status["enum"] == ErrorType.CORRECT or exception.status[
-                "enum"] == ErrorType.CORRECT_ANSWER
+            accepted = (
+                exception.status["enum"] == ErrorType.CORRECT or exception.status["enum"] == ErrorType.CORRECT_ANSWER
+            )
             self.close_args.accepted = accepted
 
         return super().handle_dodona_exception(exception)
@@ -227,7 +224,7 @@ class Judgement(DodonaCommandWithStatus):
 class Tab(DodonaCommand):
     """Dodona Tab"""
 
-    def __init__(self, title: str, **kwargs):
+    def __init__(self, title: str, **kwargs: object) -> None:
         super().__init__(title=title, **kwargs)
 
 
@@ -238,7 +235,7 @@ class Context(DodonaCommandWithAccepted):
 class TestCase(DodonaCommandWithAccepted):
     """Dodona TestCase"""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: object, **kwargs: object) -> None:
         """create TestCase
         If a single positional argument is passed, this is assumed to be the message.
         Example:
@@ -266,14 +263,14 @@ class TestCase(DodonaCommandWithAccepted):
 class Test(DodonaCommandWithStatus):
     """Dodona Test"""
 
-    def __init__(self, description: str, expected: str, **kwargs):
+    def __init__(self, description: str | dict[str, str], expected: str, **kwargs: object) -> None:
         super().__init__(description=description, expected=expected, **kwargs)
 
 
 class Message(DodonaCommand):
     """Dodona Message"""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: object, **kwargs: object) -> None:
         """create Message
         If a single positional argument is passed, this is assumed to be the message.
         Example:
@@ -297,7 +294,7 @@ class Message(DodonaCommand):
         else:
             super().__init__(message=kwargs)
 
-    def start_msg(self) -> dict:
+    def start_msg(self) -> dict | None:
         """print the "append-message" command and parameters when entering the 'with' block"""
         return {"command": "append-message", **self.start_args.__dict__}
 
@@ -308,10 +305,10 @@ class Message(DodonaCommand):
 class Annotation(DodonaCommand):
     """Dodona Annotation"""
 
-    def __init__(self, row: int, text: str, **kwargs):
+    def __init__(self, row: int, text: str, **kwargs: object) -> None:
         super().__init__(row=row, text=text, **kwargs)
 
-    def start_msg(self) -> dict:
+    def start_msg(self) -> dict | None:
         """print the "annotate-code" command and parameters when entering the 'with' block"""
         return {"command": "annotate-code", **self.start_args.__dict__}
 
@@ -322,10 +319,10 @@ class Annotation(DodonaCommand):
 class SafeAnnotation(Annotation):
     """Annotation that isn't displayed for negative line numbers"""
 
-    def __init__(self, row: int, text: str, **kwargs):
+    def __init__(self, row: int, text: str, **kwargs: object) -> None:
         super().__init__(row=row, text=text, **kwargs)
 
-    def start_msg(self) -> Optional[dict]:
+    def start_msg(self) -> dict | None:
         """If the row number was less than 0, don't print the annotation"""
         if self.start_args.row < 0:
             return None

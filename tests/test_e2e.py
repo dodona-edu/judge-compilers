@@ -3,8 +3,6 @@ import shutil
 import subprocess
 from pathlib import Path
 
-import pytest
-
 REPO = Path(__file__).resolve().parent.parent
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
@@ -13,7 +11,7 @@ HEX_TESTS = {"hex/lower.c", "hex/mixed.c"}
 VISIBLE_TESTS = {"decimal/single.c", "decimal/sum.c"} | HEX_TESTS
 
 
-def parse_commands(stdout):
+def parse_commands(stdout: str) -> list[dict]:
     # The judge prints indented JSON objects back to back, not one per line.
     decoder = json.JSONDecoder()
     commands, pos = [], 0
@@ -26,7 +24,7 @@ def parse_commands(stdout):
     return commands
 
 
-def run_judge(tmp_path, submission):
+def run_judge(tmp_path: Path, submission: str) -> list[dict]:
     workdir = tmp_path / "workdir"
     shutil.copytree(FIXTURES / "workdir", workdir)
     request = {
@@ -46,18 +44,19 @@ def run_judge(tmp_path, submission):
         text=True,
         cwd=tmp_path,
         timeout=600,
+        check=False,
     )
     assert proc.returncode == 0, proc.stderr
     return parse_commands(proc.stdout)
 
 
-def judgement(commands):
+def judgement(commands: list[dict]) -> dict:
     closes = [c for c in commands if c["command"] == "close-judgement"]
     assert len(closes) == 1
     return closes[0]
 
 
-def statuses_by_test(commands):
+def statuses_by_test(commands: list[dict]) -> dict[str, str]:
     """Test status per path in evaluation/, from each start-test and its close-test."""
     results = {}
     last_description = None
@@ -65,12 +64,13 @@ def statuses_by_test(commands):
         if command["command"] == "start-test":
             last_description = command["description"]["description"]
         elif command["command"] == "close-test":
+            assert last_description is not None
             path = next(p for p in VISIBLE_TESTS if p in last_description)
             results[path] = command["status"]["enum"]
     return results
 
 
-def hidden_accepted(commands):
+def hidden_accepted(commands: list[dict]) -> list[bool]:
     """accepted of each hidden-tests testcase, in judge order."""
     accepted = []
     expecting = False
@@ -82,27 +82,25 @@ def hidden_accepted(commands):
     return accepted
 
 
-def test_correct_submission(tmp_path):
+def test_correct_submission(tmp_path: Path) -> None:
     commands = run_judge(tmp_path, "correct.cpp")
 
     assert judgement(commands).get("accepted", True) is True
-    assert statuses_by_test(commands) == {path: "correct" for path in VISIBLE_TESTS}
+    assert statuses_by_test(commands) == dict.fromkeys(VISIBLE_TESTS, "correct")
     assert hidden_accepted(commands) == [True, True]
 
 
-def test_wrong_submission(tmp_path):
+def test_wrong_submission(tmp_path: Path) -> None:
     commands = run_judge(tmp_path, "wrong.cpp")
 
     final = judgement(commands)
     assert final["accepted"] is False
     assert final["status"]["enum"] == "wrong"
-    assert statuses_by_test(commands) == {
-        path: "wrong" if path in HEX_TESTS else "correct" for path in VISIBLE_TESTS
-    }
+    assert statuses_by_test(commands) == {path: "wrong" if path in HEX_TESTS else "correct" for path in VISIBLE_TESTS}
     assert sorted(hidden_accepted(commands)) == [False, True]
 
 
-def test_compile_error(tmp_path):
+def test_compile_error(tmp_path: Path) -> None:
     commands = run_judge(tmp_path, "compile_error.cpp")
 
     final = judgement(commands)

@@ -1,30 +1,30 @@
 #!/usr/bin/env python3
 
-import sys
 import json
-from operator import itemgetter
-from pathlib import Path
-from typing import Any, Sequence, Union
-import subprocess
 import os
-import sys
 import shutil
+import subprocess
+import sys
+from collections.abc import Sequence
+from pathlib import Path
 
 try:
     import judge
     from compile_error import handle_compile_error
-    from dodona_command import Judgement, ErrorType
+    from dodona_command import ErrorType, Judgement
 except ModuleNotFoundError:
     sys.path.append(str(Path(__file__).parent))
 
     import judge
     from compile_error import handle_compile_error
-    from dodona_command import Judgement, ErrorType
+    from dodona_command import ErrorType, Judgement
 
-def get_input():
+
+def get_input() -> str:
     return "\n".join(line for line in sys.stdin)
 
-def mkdir(folder:Union[str,Path]):
+
+def mkdir(folder: str | Path) -> None:
     # Create a folder if it does not exist yet
     # Missing parent folders on the path are created if abscent
     # If the folder already exists, then nothing happens
@@ -32,21 +32,25 @@ def mkdir(folder:Union[str,Path]):
 
     folder.mkdir(parents=True, exist_ok=True)
 
-def cd(path:Union[str,Path]):
+
+def cd(path: str | Path) -> None:
     os.chdir(str(path))
 
-def cp(src:Union[str,Path], dst:Union[str,Path]):
+
+def cp(src: str | Path, dst: str | Path) -> None:
     shutil.copy(str(src), str(dst))
 
-def cmake(args:Sequence[str]) -> bool:
+
+def cmake(args: Sequence[str]) -> bool:
     # returns whether compilation was successful
-    proc_res = subprocess.run(["cmake", *args], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    proc_res = subprocess.run(["cmake", *args], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, check=False)
 
     if proc_res.returncode != 0:
         handle_compile_error(proc_res.stderr.decode("utf-8"), proc_res.returncode)
         return False
-    
+
     return True
+
 
 if __name__ == "__main__":
     in_json_dict = json.loads(
@@ -68,18 +72,15 @@ if __name__ == "__main__":
         cd(workdir_path)
 
         build_path = Path("build")
-        
+
         mkdir(build_path)
         cd(build_path)
 
-        cmake([f"-DDODONA_RESOURCES_PATH:FILEPATH={str(eval_resources_path)}", ".."])
+        cmake([f"-DDODONA_RESOURCES_PATH:FILEPATH={eval_resources_path!s}", ".."])
         if not cmake(["--build", "."]):
-            judgement.status = {
-                "enum": ErrorType.COMPILATION_ERROR,
-                "human": ErrorType.COMPILATION_ERROR
-            }
+            judgement.status = {"enum": ErrorType.COMPILATION_ERROR, "human": ErrorType.COMPILATION_ERROR}
             judgement.accepted = False
-            exit()
+            sys.exit()
 
         cd("..")
 
@@ -89,5 +90,5 @@ if __name__ == "__main__":
         res = judge.test_submission(eval_resources_path, build_path)
 
         if res["correct"] < res["total"]:
-            judgement.status = judge._status_wrong
+            judgement.status = judge._status_wrong  # noqa: SLF001
             judgement.accepted = False

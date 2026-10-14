@@ -10,3 +10,6 @@
 /devel/
 /requirements-test.txt
 /.github/
+/pyproject.toml
+/requirements-dev.txt
+/.tool-versions

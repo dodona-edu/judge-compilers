@@ -292,8 +292,8 @@ def run_hidden_tests(hidden_tests_folder: Path, evaluation_folder: Path, build_p
     num_tests = 0
 
     for test_source_path in all_source_files:
-        expected_output_path = hidden_tests_folder / f"{test_source_path.name}.stdout"
-        expected_error_path = hidden_tests_folder / f"{test_source_path.name}.stderr"
+        expected_output_path = test_source_path.parent / f"{test_source_path.name}.stdout"
+        expected_error_path = test_source_path.parent / f"{test_source_path.name}.stderr"
 
         is_correct = _test_run_helper(
             test_source_path,

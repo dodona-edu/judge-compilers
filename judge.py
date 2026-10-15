@@ -47,6 +47,20 @@ def warn_timeout(duration: float) -> None:
         return
 
 
+def warn_no_lit_result(lit_log: str) -> None:
+    lightning_icon = "&#9889;"
+
+    warning = f"{lightning_icon} **No result was produced for this test:**\n```\n{lit_log}\n```"
+
+    warning = "\n".join(f"> {line}" for line in warning.split("\n"))
+
+    with Message(
+        description=warning,
+        format=MessageFormat.MARKDOWN,
+    ):
+        return
+
+
 def _test_run_helper(
     test_source_path: Path,
     expected_output_path: Path,
@@ -71,13 +85,30 @@ def _test_run_helper(
         tmp_lit_ouput_file = tempfile.NamedTemporaryFile(delete=False)  # noqa: SIM115
 
         proc_rec = subprocess.run(
-            ["lit", str(lit_target_path), "-o", tmp_lit_ouput_file.name], capture_output=True, check=False
+            ["lit", "-a", str(lit_target_path), "-o", tmp_lit_ouput_file.name], capture_output=True, check=False
         )
 
-        with Path(tmp_lit_ouput_file.name).open() as f:
-            lit_output_json = json.load(f)["tests"][0]
+        try:
+            with Path(tmp_lit_ouput_file.name).open() as f:
+                lit_output_json = json.load(f)["tests"][0]
+        except json.JSONDecodeError:
+            lit_output_json = None  # lit writes no JSON when it discovers no test at the path
     finally:
         Path(tmp_lit_ouput_file.name).unlink()
+
+    lit_log = (proc_rec.stdout + proc_rec.stderr).decode("utf-8", errors="replace")
+
+    if lit_output_json is None:
+        return {
+            "correct": False,
+            "status": "NO_RESULT",
+            "duration": 0.0,
+            "expected_output": expected_output,
+            "expected_error": expected_error,
+            "generated_output": "",
+            "generated_error": "",
+            "lit_log": lit_log,
+        }
 
     is_correct = proc_rec.returncode == 0
     test_status = lit_output_json["code"]  # "PASS" -> is_correct == True, "TIMEOUT" or "FAIL" -> is_correct = False
@@ -93,10 +124,24 @@ def _test_run_helper(
             "expected_error": None,
             "generated_output": None,
             "generated_error": None,
+            "lit_log": None,
         }
     stdout_file_path, stderr_file_path = itemgetter("stdout", "stderr")(
         get_test_output_files(test_source_path, evaluation_folder, build_path)
     )
+
+    if not (stdout_file_path.exists() and stderr_file_path.exists()):
+        # lit leaves no Output files when the test is not run or its RUN lines don't redirect to %t.stdout and %t.stderr
+        return {
+            "correct": False,
+            "status": test_status,
+            "duration": test_duration,
+            "expected_output": expected_output,
+            "expected_error": expected_error,
+            "generated_output": "",
+            "generated_error": "",
+            "lit_log": lit_log,
+        }
 
     with stdout_file_path.open("r", errors="replace") as f:
         generated_output = f.read()
@@ -111,6 +156,7 @@ def _test_run_helper(
         "expected_error": expected_error,
         "generated_output": generated_output,
         "generated_error": generated_error,
+        "lit_log": None,
     }
 
 
@@ -140,8 +186,16 @@ def run_test(
         expected_error,
         generated_output,
         generated_error,
+        lit_log,
     ) = itemgetter(
-        "correct", "status", "duration", "expected_output", "expected_error", "generated_output", "generated_error"
+        "correct",
+        "status",
+        "duration",
+        "expected_output",
+        "expected_error",
+        "generated_output",
+        "generated_error",
+        "lit_log",
     )(
         _test_run_helper(
             test_source_path,
@@ -212,7 +266,9 @@ def run_test(
                 test.status = _status_wrong
             test.generated = generated
 
-            if unexpected_error:
+            if lit_log:
+                warn_no_lit_result(lit_log)
+            elif unexpected_error:
                 warn_unexpected_error(generated_error)
             elif did_timeout:
                 warn_timeout(test_duration)

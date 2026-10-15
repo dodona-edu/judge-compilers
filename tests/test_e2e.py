@@ -24,11 +24,11 @@ def parse_commands(stdout: str) -> list[dict]:
     return commands
 
 
-def run_judge(tmp_path: Path, submission: str) -> list[dict]:
+def run_judge(tmp_path: Path, submission: str, evaluation: str = "evaluation") -> list[dict]:
     workdir = tmp_path / "workdir"
     shutil.copytree(FIXTURES / "workdir", workdir)
     request = {
-        "resources": str(FIXTURES / "evaluation"),
+        "resources": str(FIXTURES / evaluation),
         "source": str(FIXTURES / "submissions" / submission),
         "workdir": str(workdir),
         "memory_limit": 536870912,
@@ -108,3 +108,36 @@ def test_compile_error(tmp_path: Path) -> None:
     assert final["status"]["enum"] == "compilation error"
     assert not any(c["command"] == "start-test" for c in commands)
     assert any(c["command"] == "append-message" for c in commands)
+
+
+# Folders in evaluation_no_result/ whose test is one lit cannot produce stdout/stderr files for.
+NO_RESULT_TESTS = {"unrunnable", "no_run_line", "unsupported", "no_capture", "undiscovered"}
+
+
+def test_no_lit_result(tmp_path: Path) -> None:
+    commands = run_judge(tmp_path, "correct.cpp", evaluation="evaluation_no_result")
+
+    final = judgement(commands)
+    assert final["accepted"] is False
+    assert final["status"]["enum"] == "wrong"
+
+    results = {}
+    current = None
+    for command in commands:
+        if command["command"] == "start-test":
+            current = next(name for name in NO_RESULT_TESTS if f"{name}/a.c" in command["description"]["description"])
+            results[current] = {"messages": []}
+        elif command["command"] == "append-message" and current is not None:
+            results[current]["messages"].append(command["message"]["description"])
+        elif command["command"] == "close-test":
+            results[current]["status"] = command["status"]["enum"]
+            current = None
+
+    assert set(results) == NO_RESULT_TESTS
+    for name, result in results.items():
+        assert result["status"] == "wrong", name
+        assert len(result["messages"]) == 1, name
+    assert "command not found" in results["unrunnable"]["messages"][0]
+    assert "no 'RUN:' line" in results["no_run_line"]["messages"][0]
+    assert "does not support" in results["unsupported"]["messages"][0]
+    assert "did not discover any tests" in results["undiscovered"]["messages"][0]

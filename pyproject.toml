@@ -32,3 +32,7 @@ ignore = [
 [tool.ty.src]
 # ty skips extensionless files, so run is listed by name.
 include = [".", "run"]
+
+[tool.pytest.ini_options]
+# tests/ has no package, so the judge modules are imported from the repo root.
+pythonpath = ["."]

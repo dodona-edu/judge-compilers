@@ -22,7 +22,7 @@ class ErrorType(str, Enum):
     CORRECT_ANSWER = "correct answer"
 
     def __str__(self) -> str:
-        return str(self)
+        return self.value
 
 
 class MessagePermission(str, Enum):
@@ -33,7 +33,7 @@ class MessagePermission(str, Enum):
     ZEUS = "zeus"
 
     def __str__(self) -> str:
-        return str(self)
+        return self.value
 
 
 class MessageFormat(str, Enum):
@@ -51,7 +51,7 @@ class MessageFormat(str, Enum):
     SQL = "sql"
 
     def __str__(self) -> str:
-        return str(self)
+        return self.value
 
 
 class AnnotationSeverity(str, Enum):
@@ -62,7 +62,7 @@ class AnnotationSeverity(str, Enum):
     INFO = "info"
 
     def __str__(self) -> str:
-        return str(self)
+        return self.value
 
 
 class DodonaException(Exception):

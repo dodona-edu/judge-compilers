@@ -6,9 +6,13 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
-# Tests the wrong submission (no hexadecimal literals) must fail, keyed by path in evaluation/.
+# Tests using hexadecimal literals, keyed by path in evaluation/.
 HEX_TESTS = {"hex/lower.c", "hex/mixed.c"}
-VISIBLE_TESTS = {"decimal/single.c", "decimal/sum.c"} | HEX_TESTS
+# Tests with no .stdout file whose RUN line checks the driver's output itself.
+CUSTOM_TESTS = {"custom/decimal.custom.c", "custom/hex.custom.c"}
+VISIBLE_TESTS = {"decimal/single.c", "decimal/sum.c"} | HEX_TESTS | CUSTOM_TESTS
+# Tests the wrong submission (no hexadecimal literals) must fail.
+WRONG_TESTS = HEX_TESTS | {"custom/hex.custom.c"}
 
 
 def parse_commands(stdout: str) -> list[dict]:
@@ -70,6 +74,33 @@ def statuses_by_test(commands: list[dict]) -> dict[str, str]:
     return results
 
 
+def custom_test_details(commands: list[dict]) -> dict[str, dict]:
+    """Expected/generated output and message texts of each custom test, keyed by path in evaluation/."""
+    details = {}
+    current = None
+    for command in commands:
+        if command["command"] == "start-test":
+            current = next((p for p in CUSTOM_TESTS if p in command["description"]["description"]), None)
+            if current is not None:
+                details[current] = {"expected": command["expected"], "generated": None, "messages": []}
+        elif command["command"] == "append-message" and current is not None:
+            details[current]["messages"].append(command["message"]["description"])
+        elif command["command"] == "close-test":
+            if current is not None:
+                details[current]["generated"] = command.get("generated")
+            current = None
+    return details
+
+
+def assert_custom_tests_have_no_output(commands: list[dict]) -> None:
+    details = custom_test_details(commands)
+    assert set(details) == CUSTOM_TESTS
+    for path, detail in details.items():
+        assert not detail["expected"], path
+        assert not detail["generated"], path
+        assert not any("No result was produced" in m for m in detail["messages"]), path
+
+
 def hidden_accepted(commands: list[dict]) -> list[bool]:
     """accepted of each hidden-tests testcase, in judge order."""
     accepted = []
@@ -88,6 +119,7 @@ def test_correct_submission(tmp_path: Path) -> None:
     assert judgement(commands).get("accepted", True) is True
     assert statuses_by_test(commands) == dict.fromkeys(VISIBLE_TESTS, "correct")
     assert hidden_accepted(commands) == [True, True]
+    assert_custom_tests_have_no_output(commands)
 
 
 def test_wrong_submission(tmp_path: Path) -> None:
@@ -96,8 +128,9 @@ def test_wrong_submission(tmp_path: Path) -> None:
     final = judgement(commands)
     assert final["accepted"] is False
     assert final["status"]["enum"] == "wrong"
-    assert statuses_by_test(commands) == {path: "wrong" if path in HEX_TESTS else "correct" for path in VISIBLE_TESTS}
+    assert statuses_by_test(commands) == {path: "wrong" if path in WRONG_TESTS else "correct" for path in VISIBLE_TESTS}
     assert sorted(hidden_accepted(commands)) == [False, True]
+    assert_custom_tests_have_no_output(commands)
 
 
 def test_compile_error(tmp_path: Path) -> None:

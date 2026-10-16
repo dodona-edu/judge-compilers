@@ -15,11 +15,11 @@ int main(int argc, char **argv) {
   if (!buffer)
     return 1;
 
-  // The RUN lines contain digits that are not part of the program under test.
+  // RUN and CHECK lines contain digits that are not part of the program under test.
   std::istringstream lines((*buffer)->getBuffer().str());
   std::string line, source;
   while (std::getline(lines, line))
-    if (line.rfind("// RUN:", 0) != 0)
+    if (line.rfind("// RUN:", 0) != 0 && line.rfind("// CHECK", 0) != 0)
       source += line + "\n";
 
   for (const std::string &literal : integerLiterals(source))

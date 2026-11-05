@@ -13,14 +13,10 @@ ignore = [
     "COM812",
     # This repo has no copyright headers.
     "CPY001",
-    # DodonaException is the name every judge's dodona_command.py uses; renaming it forks the shared module.
-    "N818",
-    # str(Enum) members: StrEnum changes str() and format() of ErrorType, MessageFormat and friends in the JSON output.
-    "UP042",
     # cmake and lit are found on PATH inside the judge image, and their arguments come from the exercise's own files.
     "S603",
     "S607",
-    # No docstring convention in this judge, and dodona_command.py stays close to the copy other judges carry.
+    # No docstring convention in this judge.
     "D",
 ]
 

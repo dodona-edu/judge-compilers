@@ -10,6 +10,7 @@ jobs:
   e2e:
     uses: ./.github/workflows/e2e.yml
     with:
+      image: ghcr.io/dodona-edu/dodona-compilers:live
       ref: ${{ github.sha }}
 
   lint:

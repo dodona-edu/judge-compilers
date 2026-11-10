@@ -10,7 +10,7 @@ jobs:
   requirements-match-image:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dodona-edu/dodona-compilers:latest
+      image: ghcr.io/dodona-edu/dodona-compilers:live
       options: --user root
 
     steps:

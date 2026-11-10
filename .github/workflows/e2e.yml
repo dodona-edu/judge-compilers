@@ -6,7 +6,7 @@ on:
       image:
         description: Judge image to run the suite in
         type: string
-        default: ghcr.io/dodona-edu/dodona-compilers:latest
+        default: ghcr.io/dodona-edu/dodona-compilers:live
       ref:
         description: judge-compilers ref to test
         type: string
@@ -16,7 +16,7 @@ on:
       image:
         description: Judge image to run the suite in
         type: string
-        default: ghcr.io/dodona-edu/dodona-compilers:latest
+        default: ghcr.io/dodona-edu/dodona-compilers:live
       ref:
         description: judge-compilers ref to test
         type: string
